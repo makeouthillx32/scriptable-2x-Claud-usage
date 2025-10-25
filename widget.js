@@ -14,7 +14,6 @@ const BASE_IMAGE_URL = 'https://cdn.cloudflare.steamstatic.com/steamcommunity/pu
 const PLAYER_SUMMARY_URL = `https://api.steampowered.com/ISteamUser/GetPlayerSummaries/v0002/?key=${API_KEY}&steamids=${STEAM_ID}`;
 const OWNED_GAMES_URL = `https://api.steampowered.com/IPlayerService/GetOwnedGames/v0001/?key=${API_KEY}&steamid=${STEAM_ID}&format=json&include_appinfo=false&include_played_free_games=true`;
 const LEVEL_URL = `http://api.steampowered.com/IPlayerService/GetSteamLevel/v1/?key=${API_KEY}&steamid=${STEAM_ID}`;
-const ANIMATED_AVATAR_URL = `https://api.steampowered.com/IPlayerService/GetAnimatedAvatar/v1/?key=${API_KEY}&steamid=${STEAM_ID}`;
 const AVATAR_FRAME_URL = `https://api.steampowered.com/IPlayerService/GetAvatarFrame/v1/?key=${API_KEY}&steamid=${STEAM_ID}`;
 const BG_URL = `https://api.steampowered.com/IPlayerService/GetMiniProfileBackground/v1/?key=${API_KEY}&steamid=${STEAM_ID}`;
 
@@ -28,11 +27,10 @@ async function fetchJSON(url) {
 // Main function to build the widget
 async function createWidget() {
   // Fetch base data
-  const [summaryData, gamesData, levelData, animatedAvatarData, frameData, bgData] = await Promise.all([
+  const [summaryData, gamesData, levelData, frameData, bgData] = await Promise.all([
     fetchJSON(PLAYER_SUMMARY_URL),
     fetchJSON(OWNED_GAMES_URL),
     fetchJSON(LEVEL_URL),
-    fetchJSON(ANIMATED_AVATAR_URL),
     fetchJSON(AVATAR_FRAME_URL),
     fetchJSON(BG_URL),
   ]);
@@ -75,9 +73,6 @@ async function createWidget() {
   // Get avatar and frame URLs
   let avatarUrl = player.avatarfull; // Fallback to static from summary
   let frameUrl = '';
-  if (animatedAvatarData.response && animatedAvatarData.response.avatar) {
-    avatarUrl = BASE_IMAGE_URL + animatedAvatarData.response.avatar.image_large; // Use static large for compositing
-  }
   if (frameData.response && frameData.response.avatar_frame) {
     frameUrl = BASE_IMAGE_URL + frameData.response.avatar_frame.image_large;
   }
@@ -252,7 +247,11 @@ async function loadImage(url) {
 async function getFramedAvatar(avatarUrl, frameUrl) {
   let avatarImg = await loadImage(avatarUrl);
   if (!avatarImg) {
-    return new Image(); // Empty
+    let ctx = new DrawContext();
+    ctx.size = new Size(184, 184);
+    ctx.opaque = false;
+    ctx.setFillColor(new Color('#1538fc28'));
+    return ctx.getImage(); // Empty image
   }
 
   let ctx = new DrawContext();
