@@ -1,243 +1,91 @@
-// Claude 2x Usage Widget
-// by skill · for iOS Scriptable
-// Promo: March 13–27, 2026
-// 2x on weekdays OUTSIDE 8AM–2PM ET (5–11AM PT)
-// 2x ALL DAY on weekends
+# Claude 2x Usage Widget for Scriptable
 
-// ─── CONFIG ───────────────────────────────────────────
-const PROMO_END = new Date("2026-03-28T00:00:00-05:00"); // March 27 end of day ET
+A sleek and informative iOS widget, built for the [Scriptable](https://scriptable.app/) app, that displays whether Claude's double usage limits are currently active — right on your Home Screen.
 
-// Peak window in ET hours (24h)
-const PEAK_START_ET = 8;  // 8 AM ET
-const PEAK_END_ET   = 14; // 2 PM ET
+Never miss your off-peak window again. Keep a quick eye on when you've got 2x tokens and make the most of every coding session.
 
-// Colors
-const COLOR_BG_ACTIVE   = new LinearGradient();
-COLOR_BG_ACTIVE.locations = [0, 1];
-COLOR_BG_ACTIVE.colors = [new Color("#0f0c29"), new Color("#302b63")];
+![Widget Preview](https://raw.githubusercontent.com/makeouthillx32/Scriptable-Claude2x-Widget/refs/heads/master/.github/images/active.jpg?raw=true)
 
-const COLOR_BG_PEAK = new LinearGradient();
-COLOR_BG_PEAK.locations = [0, 1];
-COLOR_BG_PEAK.colors = [new Color("#1a1a2e"), new Color("#16213e")];
+## 🖼️ Images
 
-const COLOR_BG_EXPIRED = new LinearGradient();
-COLOR_BG_EXPIRED.locations = [0, 1];
-COLOR_BG_EXPIRED.colors = [new Color("#1a1a1a"), new Color("#2d2d2d")];
+<details>
+<summary><b>2x Active</b></summary>
 
-const COLOR_ACCENT  = new Color("#cc785c"); // Claude orange-ish
-const COLOR_WHITE   = new Color("#ffffff");
-const COLOR_DIM     = new Color("#aaaaaa");
-const COLOR_GREEN   = new Color("#4ade80");
-const COLOR_YELLOW  = new Color("#facc15");
-const COLOR_GRAY    = new Color("#666666");
-// ──────────────────────────────────────────────────────
+![Active](https://raw.githubusercontent.com/makeouthillx32/Scriptable-Claude2x-Widget/refs/heads/master/.github/images/active.jpg?raw=true)
 
-function getETHour(date) {
-  // ET = UTC-5 (EST) or UTC-4 (EDT)
-  // Use Intl to correctly resolve ET including DST
-  const etString = date.toLocaleString("en-US", { timeZone: "America/New_York", hour: "numeric", hour12: false });
-  return parseInt(etString, 10);
-}
+</details>
 
-function isWeekend(date) {
-  // Day of week in ET
-  const day = parseInt(
-    date.toLocaleString("en-US", { timeZone: "America/New_York", weekday: "short" })
-      .replace("Sun", "0").replace("Mon", "1").replace("Tue", "2")
-      .replace("Wed", "3").replace("Thu", "4").replace("Fri", "5").replace("Sat", "6"),
-    10
-  );
-  // Simpler: use numeric
-  const etDay = new Date(date.toLocaleString("en-US", { timeZone: "America/New_York" })).getDay();
-  return etDay === 0 || etDay === 6;
-}
+<details>
+<summary><b>Peak Hours (normal limits)</b></summary>
 
-function getStatus(now) {
-  if (now >= PROMO_END) return "expired";
-  if (isWeekend(now)) return "active";
-  const etHour = getETHour(now);
-  if (etHour >= PEAK_START_ET && etHour < PEAK_END_ET) return "peak";
-  return "active";
-}
+![Peak](https://raw.githubusercontent.com/makeouthillx32/Scriptable-Claude2x-Widget/refs/heads/master/.github/images/peak.jpg?raw=true)
 
-function timeUntilNextWindow(now) {
-  // Returns ms until next 2x window starts
-  // If we're in peak, next window is at 2PM ET today
-  const etHour = getETHour(now);
-  if (!isWeekend(now) && etHour >= PEAK_START_ET && etHour < PEAK_END_ET) {
-    // Next 2x starts at PEAK_END_ET
-    const next = new Date(now.toLocaleString("en-US", { timeZone: "America/New_York" }));
-    next.setHours(PEAK_END_ET, 0, 0, 0);
-    // Convert back — approximate offset
-    const diff = next - new Date(now.toLocaleString("en-US", { timeZone: "America/New_York" }));
-    return diff;
-  }
-  return 0;
-}
+</details>
 
-function formatCountdown(ms) {
-  if (ms <= 0) return "now";
-  const totalSecs = Math.floor(ms / 1000);
-  const h = Math.floor(totalSecs / 3600);
-  const m = Math.floor((totalSecs % 3600) / 60);
-  if (h > 0) return `${h}h ${m}m`;
-  return `${m}m`;
-}
+<details>
+<summary><b>Promotion Ended</b></summary>
 
-function daysUntilExpiry(now) {
-  const diff = PROMO_END - now;
-  return Math.ceil(diff / (1000 * 60 * 60 * 24));
-}
+![Expired](https://raw.githubusercontent.com/makeouthillx32/Scriptable-Claude2x-Widget/refs/heads/master/.github/images/expired.jpg?raw=true)
 
-// ─── BUILD WIDGET ──────────────────────────────────────
-async function createWidget() {
-  const now = new Date();
-  const status = getStatus(now);
+</details>
 
-  const widget = new ListWidget();
-  widget.setPadding(14, 16, 14, 16);
+## ✨ Features
 
-  // Refresh every 5 minutes
-  const nextRefresh = new Date(now.getTime() + 5 * 60 * 1000);
-  widget.refreshAfterDate = nextRefresh;
+This widget tracks Claude's off-peak double usage promotion and displays the following:
 
-  // Background
-  if (status === "active") {
-    widget.backgroundGradient = COLOR_BG_ACTIVE;
-  } else if (status === "peak") {
-    widget.backgroundGradient = COLOR_BG_PEAK;
-  } else {
-    widget.backgroundGradient = COLOR_BG_EXPIRED;
-  }
+- **2x Active State:** Bold green badge with a fun rotating message when you're in the double usage window.
+- **Peak Hours State:** Tells you you're in normal-limit territory and shows a live countdown to when 2x resumes.
+- **Promotion Expired State:** Gracefully switches to an expired view after March 27, 2026 so it doesn't sit broken on your Home Screen.
+- **Promo Countdown:** Shows how many days remain before the promotion ends.
+- **Auto-refresh:** Updates every 5 minutes. Tapping the widget opens claude.ai.
 
-  // Open Claude when tapped
-  widget.url = "https://claude.ai";
+## 🚀 Installation
 
-  if (status === "expired") {
-    // ── EXPIRED STATE ──
-    const emoji = widget.addText("💤");
-    emoji.font = Font.systemFont(28);
-    emoji.centerAlignText();
+### Prerequisites
 
-    widget.addSpacer(6);
+1. **Scriptable App:** You must have the [Scriptable App](https://apps.apple.com/us/app/scriptable/id1405459188) installed on your iOS device.
+2. No API key needed — this widget is fully self-contained.
 
-    const title = widget.addText("Promo Ended");
-    title.font = Font.boldSystemFont(15);
-    title.textColor = COLOR_DIM;
-    title.centerAlignText();
+### Setup Steps
 
-    widget.addSpacer(4);
+1. **Get the Code:** Copy the raw source code from the [Claude2xWidget.js](https://raw.githubusercontent.com/makeouthillx32/Scriptable-Claude2x-Widget/refs/heads/master/Claude2xWidget.js) file in this repository.
+2. **Open Scriptable:** Tap the `+` icon in the top-right corner of the Scriptable app to create a new script.
+3. **Paste the Code:** Replace the default code with the code you copied.
+4. **Save the Script:** Give your script a name (e.g., "Claude 2x") and save it.
+5. **Add to Home Screen:**
+   - Run the script once inside the app to ensure it works.
+   - On your Home Screen, enter "jiggle mode".
+   - Tap the `+` button in the top-left corner.
+   - Search for and select **"Scriptable"**.
+   - Choose **small** widget size.
+   - Tap the widget on your Home Screen to edit it, and select the "Claude 2x" script.
 
-    const sub = widget.addText("Back to normal limits");
-    sub.font = Font.systemFont(11);
-    sub.textColor = COLOR_GRAY;
-    sub.centerAlignText();
+## 🛠️ Configuration
 
-  } else if (status === "active") {
-    // ── ACTIVE / 2X STATE ──
+The widget works out-of-the-box with no configuration required. If you want to tweak it:
 
-    // Top badge row
-    const badgeStack = widget.addStack();
-    badgeStack.layoutHorizontally();
-    badgeStack.centerAlignContent();
+- **Colors:** Edit the `COLOR_*` constants near the top of the script to match your preferred theme.
+- **Messages:** Swap out the fun messages array in the `active` state with your own lines.
+- **Time zone:** The peak window is calculated using `America/New_York` (ET) via `Intl` — DST is handled automatically.
 
-    const badgeText = badgeStack.addText("2×");
-    badgeText.font = Font.boldSystemFont(36);
-    badgeText.textColor = COLOR_GREEN;
-    badgeStack.addSpacer(8);
+## 📝 Promotion Details
 
-    const labelStack = badgeStack.addStack();
-    labelStack.layoutVertically();
-    const labelTop = labelStack.addText("USAGE");
-    labelTop.font = Font.boldSystemFont(11);
-    labelTop.textColor = COLOR_GREEN;
-    const labelBot = labelStack.addText("ACTIVE");
-    labelBot.font = Font.boldSystemFont(11);
-    labelBot.textColor = COLOR_GREEN;
+- **Active:** March 13 – March 27, 2026
+- **Off-peak (2x) on weekdays:** Outside 8 AM – 2 PM ET / 5 – 11 AM PT
+- **Weekends:** 2x all day, every hour
+- **Eligible plans:** Free, Pro, Max, and Team (Enterprise excluded)
+- No opt-in needed — Anthropic applies it automatically
 
-    widget.addSpacer(8);
+## 🤝 Contributing
 
-    // Fun message
-    const msgs = [
-      "Time to cook. 🍳",
-      "Ship something. 🚀",
-      "Go build. ⚡",
-      "Double tokens, no cap. 🔥",
-      "Max out. Now. 💪",
-      "The window is open. 🪟",
-    ];
-    const msg = msgs[new Date().getMinutes() % msgs.length];
-    const funText = widget.addText(msg);
-    funText.font = Font.mediumSystemFont(13);
-    funText.textColor = COLOR_WHITE;
-    funText.minimumScaleFactor = 0.7;
+Contributions, issues, and feature requests are welcome! Feel free to check the [issues page](https://github.com/makeouthillx32/Scriptable-Claude2x-Widget/issues) or open a pull request.
 
-    widget.addSpacer(6);
+## 📜 License
 
-    // Expiry countdown
-    const days = daysUntilExpiry(now);
-    const expiryRow = widget.addStack();
-    expiryRow.layoutHorizontally();
-    expiryRow.centerAlignContent();
+This project is licensed under the **MIT License**. See the [LICENSE](https://raw.githubusercontent.com/makeouthillx32/Scriptable-Claude2x-Widget/refs/heads/master/LICENSE) file for details.
 
-    const dot = expiryRow.addText("●");
-    dot.font = Font.systemFont(8);
-    dot.textColor = COLOR_YELLOW;
-    expiryRow.addSpacer(4);
+---
 
-    const expires = expiryRow.addText(
-      days === 1 ? "Ends tomorrow" : `Ends in ${days} days`
-    );
-    expires.font = Font.systemFont(10);
-    expires.textColor = COLOR_YELLOW;
+**Enjoy your double tokens!**
 
-  } else {
-    // ── PEAK (normal limits) STATE ──
-
-    const emojiText = widget.addText("⏳");
-    emojiText.font = Font.systemFont(28);
-    emojiText.centerAlignText();
-
-    widget.addSpacer(4);
-
-    const peakLabel = widget.addText("Peak Hours");
-    peakLabel.font = Font.boldSystemFont(14);
-    peakLabel.textColor = COLOR_DIM;
-    peakLabel.centerAlignText();
-
-    widget.addSpacer(4);
-
-    const normalLabel = widget.addText("Normal limits now");
-    normalLabel.font = Font.systemFont(11);
-    normalLabel.textColor = COLOR_GRAY;
-    normalLabel.centerAlignText();
-
-    widget.addSpacer(6);
-
-    // Show when 2x resumes
-    const msUntil = timeUntilNextWindow(now);
-    const countdownStr = formatCountdown(msUntil);
-    const resumeRow = widget.addStack();
-    resumeRow.layoutHorizontally();
-    resumeRow.centerAlignContent();
-
-    const resumeLabel = resumeRow.addText(`2× resumes in ${countdownStr}`);
-    resumeLabel.font = Font.mediumSystemFont(11);
-    resumeLabel.textColor = COLOR_ACCENT;
-    resumeLabel.centerAlignText();
-  }
-
-  return widget;
-}
-
-// ─── RUN ──────────────────────────────────────────────
-const widget = await createWidget();
-
-if (config.runsInWidget) {
-  Script.setWidget(widget);
-} else {
-  // Preview in app — try small first, it fits best
-  await widget.presentSmall();
-}
-
-Script.complete()
+If you find this project helpful, please consider giving it a ⭐ on GitHub!
