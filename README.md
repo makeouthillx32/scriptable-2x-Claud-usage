@@ -8,33 +8,6 @@ Never miss your off-peak window again. Keep a quick eye on when you've got 2x to
 
 ## 🖼️ Images
 
-<details>
-<summary><b>2x Active</b></summary>
-
-![Active](https://raw.githubusercontent.com/makeouthillx32/scriptable-2x-Claud-usage/refs/heads/master/.github/images/online.jpg?raw=true)
-
-</details>
-
-<details>
-<summary><b>Peak Hours (normal limits)</b></summary>
-
-![Peak](https://raw.githubusercontent.com/makeouthillx32/scriptable-2x-Claud-usage/refs/heads/master/.github/images/away.jpg?raw=true)
-
-</details>
-
-<details>
-<summary><b>Promotion Ended</b></summary>
-
-![Expired](https://raw.githubusercontent.com/makeouthillx32/scriptable-2x-Claud-usage/refs/heads/master/.github/images/offline.jpg?raw=true)
-
-</details>
-
-<details>
-<summary><b>In-Peak window</b></summary>
-
-![In Peak](https://raw.githubusercontent.com/makeouthillx32/scriptable-2x-Claud-usage/refs/heads/master/.github/images/in_game.jpg?raw=true)
-
-</details>
 
 ## ✨ Features
 
