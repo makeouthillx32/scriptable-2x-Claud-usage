@@ -4,28 +4,35 @@ A sleek and informative iOS widget, built for the [Scriptable](https://scriptabl
 
 Never miss your off-peak window again. Keep a quick eye on when you've got 2x tokens and make the most of every coding session.
 
-![Widget Preview](https://raw.githubusercontent.com/makeouthillx32/Scriptable-Claude2x-Widget/refs/heads/master/.github/images/active.jpg?raw=true)
+![Widget Preview](https://raw.githubusercontent.com/makeouthillx32/Scriptable-Steam-Widget/refs/heads/master/.github/images/in_game.jpg?raw=true)
 
 ## 🖼️ Images
 
 <details>
 <summary><b>2x Active</b></summary>
 
-![Active](https://raw.githubusercontent.com/makeouthillx32/Scriptable-Claude2x-Widget/refs/heads/master/.github/images/active.jpg?raw=true)
+![Active](https://raw.githubusercontent.com/makeouthillx32/Scriptable-Steam-Widget/refs/heads/master/.github/images/online.jpg?raw=true)
 
 </details>
 
 <details>
 <summary><b>Peak Hours (normal limits)</b></summary>
 
-![Peak](https://raw.githubusercontent.com/makeouthillx32/Scriptable-Claude2x-Widget/refs/heads/master/.github/images/peak.jpg?raw=true)
+![Peak](https://raw.githubusercontent.com/makeouthillx32/Scriptable-Steam-Widget/refs/heads/master/.github/images/away.jpg?raw=true)
 
 </details>
 
 <details>
 <summary><b>Promotion Ended</b></summary>
 
-![Expired](https://raw.githubusercontent.com/makeouthillx32/Scriptable-Claude2x-Widget/refs/heads/master/.github/images/expired.jpg?raw=true)
+![Expired](https://raw.githubusercontent.com/makeouthillx32/Scriptable-Steam-Widget/refs/heads/master/.github/images/offline.jpg?raw=true)
+
+</details>
+
+<details>
+<summary><b>In-Peak window</b></summary>
+
+![In Peak](https://raw.githubusercontent.com/makeouthillx32/Scriptable-Steam-Widget/refs/heads/master/.github/images/in_game.jpg?raw=true)
 
 </details>
 
@@ -43,22 +50,22 @@ This widget tracks Claude's off-peak double usage promotion and displays the fol
 
 ### Prerequisites
 
-1. **Scriptable App:** You must have the [Scriptable App](https://apps.apple.com/us/app/scriptable/id1405459188) installed on your iOS device.
-2. No API key needed — this widget is fully self-contained.
+1.  **Scriptable App:** You must have the [Scriptable App](https://apps.apple.com/us/app/scriptable/id1405459188) installed on your iOS device.
+2.  No API key needed — this widget is fully self-contained.
 
 ### Setup Steps
 
-1. **Get the Code:** Copy the raw source code from the [Claude2xWidget.js](https://raw.githubusercontent.com/makeouthillx32/Scriptable-Claude2x-Widget/refs/heads/master/Claude2xWidget.js) file in this repository.
-2. **Open Scriptable:** Tap the `+` icon in the top-right corner of the Scriptable app to create a new script.
-3. **Paste the Code:** Replace the default code with the code you copied.
-4. **Save the Script:** Give your script a name (e.g., "Claude 2x") and save it.
-5. **Add to Home Screen:**
-   - Run the script once inside the app to ensure it works.
-   - On your Home Screen, enter "jiggle mode".
-   - Tap the `+` button in the top-left corner.
-   - Search for and select **"Scriptable"**.
-   - Choose **small** widget size.
-   - Tap the widget on your Home Screen to edit it, and select the "Claude 2x" script.
+1.  **Get the Code:** Copy the raw source code from the [widget.js](https://raw.githubusercontent.com/makeouthillx32/Scriptable-Steam-Widget/refs/heads/master/widget.js) file in this repository.
+2.  **Open Scriptable:** Tap the `+` icon in the top-right corner of the Scriptable app to create a new script.
+3.  **Paste the Code:** Replace the default code with the code you copied.
+4.  **Save the Script:** Give your script a name (e.g., "Claude 2x") and save it.
+5.  **Add to Home Screen:**
+    - Run the script once inside the app to ensure it works.
+    - On your Home Screen, enter "jiggle mode".
+    - Tap the `+` button in the top-left corner.
+    - Search for and select **"Scriptable"**.
+    - Choose **small** widget size.
+    - Tap the widget on your Home Screen to edit it, and select the "Claude 2x" script.
 
 ## 🛠️ Configuration
 
@@ -78,11 +85,11 @@ The widget works out-of-the-box with no configuration required. If you want to t
 
 ## 🤝 Contributing
 
-Contributions, issues, and feature requests are welcome! Feel free to check the [issues page](https://github.com/makeouthillx32/Scriptable-Claude2x-Widget/issues) or open a pull request.
+Contributions, issues, and feature requests are welcome! Feel free to check the [issues page](https://github.com/makeouthillx32/Scriptable-Steam-Widget/issues) or open a pull request.
 
 ## 📜 License
 
-This project is licensed under the **MIT License**. See the [LICENSE](https://raw.githubusercontent.com/makeouthillx32/Scriptable-Claude2x-Widget/refs/heads/master/LICENSE) file for details.
+This project is licensed under the **GNU License**. See the [LICENSE](https://raw.githubusercontent.com/makeouthillx32/Scriptable-Steam-Widget/refs/heads/master/LICENSE) file for details.
 
 ---
 
