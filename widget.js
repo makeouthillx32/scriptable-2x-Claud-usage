@@ -1,316 +1,243 @@
-// Steam Account Widget for Scriptable
-// Displays Steam account info: avatar, name, level, games count, online status, etc.
-// Author: SolsticeLeaf
-// Note: You need a Steam API Key from https://steamcommunity.com/dev/apikey
-// Replace 'YOUR_API_KEY' and 'YOUR_STEAM_ID' with your actual values.
-// Steam ID is the 64-bit ID (e.g., from steamid.io).
+// Claude 2x Usage Widget
+// by skill · for iOS Scriptable
+// Promo: March 13–27, 2026
+// 2x on weekdays OUTSIDE 8AM–2PM ET (5–11AM PT)
+// 2x ALL DAY on weekends
 
-const API_KEY = 'YOUR_API_KEY'; // Replace with your Steam API Key
-const STEAM_ID = 'YOUR_STEAM_ID_64'; // Replace with your 64-bit Steam ID
+// ─── CONFIG ───────────────────────────────────────────
+const PROMO_END = new Date("2026-03-28T00:00:00-05:00"); // March 27 end of day ET
 
-const BASE_IMAGE_URL = 'https://cdn.cloudflare.steamstatic.com/steamcommunity/public/images/';
+// Peak window in ET hours (24h)
+const PEAK_START_ET = 8;  // 8 AM ET
+const PEAK_END_ET   = 14; // 2 PM ET
 
-// URLs for Steam API endpoints
-const PLAYER_SUMMARY_URL = `https://api.steampowered.com/ISteamUser/GetPlayerSummaries/v0002/?key=${API_KEY}&steamids=${STEAM_ID}`;
-const OWNED_GAMES_URL = `https://api.steampowered.com/IPlayerService/GetOwnedGames/v0001/?key=${API_KEY}&steamid=${STEAM_ID}&format=json&include_appinfo=false&include_played_free_games=true`;
-const LEVEL_URL = `http://api.steampowered.com/IPlayerService/GetSteamLevel/v1/?key=${API_KEY}&steamid=${STEAM_ID}`;
-const AVATAR_FRAME_URL = `https://api.steampowered.com/IPlayerService/GetAvatarFrame/v1/?key=${API_KEY}&steamid=${STEAM_ID}`;
-const BG_URL = `https://api.steampowered.com/IPlayerService/GetMiniProfileBackground/v1/?key=${API_KEY}&steamid=${STEAM_ID}`;
+// Colors
+const COLOR_BG_ACTIVE   = new LinearGradient();
+COLOR_BG_ACTIVE.locations = [0, 1];
+COLOR_BG_ACTIVE.colors = [new Color("#0f0c29"), new Color("#302b63")];
 
-// Function to fetch data from URL
-async function fetchJSON(url) {
-  const req = new Request(url);
-  req.method = 'GET';
-  return await req.loadJSON();
+const COLOR_BG_PEAK = new LinearGradient();
+COLOR_BG_PEAK.locations = [0, 1];
+COLOR_BG_PEAK.colors = [new Color("#1a1a2e"), new Color("#16213e")];
+
+const COLOR_BG_EXPIRED = new LinearGradient();
+COLOR_BG_EXPIRED.locations = [0, 1];
+COLOR_BG_EXPIRED.colors = [new Color("#1a1a1a"), new Color("#2d2d2d")];
+
+const COLOR_ACCENT  = new Color("#cc785c"); // Claude orange-ish
+const COLOR_WHITE   = new Color("#ffffff");
+const COLOR_DIM     = new Color("#aaaaaa");
+const COLOR_GREEN   = new Color("#4ade80");
+const COLOR_YELLOW  = new Color("#facc15");
+const COLOR_GRAY    = new Color("#666666");
+// ──────────────────────────────────────────────────────
+
+function getETHour(date) {
+  // ET = UTC-5 (EST) or UTC-4 (EDT)
+  // Use Intl to correctly resolve ET including DST
+  const etString = date.toLocaleString("en-US", { timeZone: "America/New_York", hour: "numeric", hour12: false });
+  return parseInt(etString, 10);
 }
 
-// Main function to build the widget
+function isWeekend(date) {
+  // Day of week in ET
+  const day = parseInt(
+    date.toLocaleString("en-US", { timeZone: "America/New_York", weekday: "short" })
+      .replace("Sun", "0").replace("Mon", "1").replace("Tue", "2")
+      .replace("Wed", "3").replace("Thu", "4").replace("Fri", "5").replace("Sat", "6"),
+    10
+  );
+  // Simpler: use numeric
+  const etDay = new Date(date.toLocaleString("en-US", { timeZone: "America/New_York" })).getDay();
+  return etDay === 0 || etDay === 6;
+}
+
+function getStatus(now) {
+  if (now >= PROMO_END) return "expired";
+  if (isWeekend(now)) return "active";
+  const etHour = getETHour(now);
+  if (etHour >= PEAK_START_ET && etHour < PEAK_END_ET) return "peak";
+  return "active";
+}
+
+function timeUntilNextWindow(now) {
+  // Returns ms until next 2x window starts
+  // If we're in peak, next window is at 2PM ET today
+  const etHour = getETHour(now);
+  if (!isWeekend(now) && etHour >= PEAK_START_ET && etHour < PEAK_END_ET) {
+    // Next 2x starts at PEAK_END_ET
+    const next = new Date(now.toLocaleString("en-US", { timeZone: "America/New_York" }));
+    next.setHours(PEAK_END_ET, 0, 0, 0);
+    // Convert back — approximate offset
+    const diff = next - new Date(now.toLocaleString("en-US", { timeZone: "America/New_York" }));
+    return diff;
+  }
+  return 0;
+}
+
+function formatCountdown(ms) {
+  if (ms <= 0) return "now";
+  const totalSecs = Math.floor(ms / 1000);
+  const h = Math.floor(totalSecs / 3600);
+  const m = Math.floor((totalSecs % 3600) / 60);
+  if (h > 0) return `${h}h ${m}m`;
+  return `${m}m`;
+}
+
+function daysUntilExpiry(now) {
+  const diff = PROMO_END - now;
+  return Math.ceil(diff / (1000 * 60 * 60 * 24));
+}
+
+// ─── BUILD WIDGET ──────────────────────────────────────
 async function createWidget() {
-  // Fetch base data
-  const [summaryData, gamesData, levelData, frameData, bgData] = await Promise.all([
-    fetchJSON(PLAYER_SUMMARY_URL),
-    fetchJSON(OWNED_GAMES_URL),
-    fetchJSON(LEVEL_URL),
-    fetchJSON(AVATAR_FRAME_URL),
-    fetchJSON(BG_URL),
-  ]);
+  const now = new Date();
+  const status = getStatus(now);
 
-  const player = summaryData.response.players[0];
-  const gamesCount = gamesData.response.game_count || 0;
-  const level = levelData.response.player_level || 0;
+  const widget = new ListWidget();
+  widget.setPadding(14, 16, 14, 16);
 
-  // Get appids for achievements
-  const appids = gamesData.response.games ? gamesData.response.games.map((g) => g.appid) : [];
+  // Refresh every 5 minutes
+  const nextRefresh = new Date(now.getTime() + 5 * 60 * 1000);
+  widget.refreshAfterDate = nextRefresh;
 
-  // Achievements URL
-  let achievementsUrl = `https://api.steampowered.com/IPlayerService/GetTopAchievementsForGames/v1/?key=${API_KEY}&steamid=${STEAM_ID}&language=en&max_achievements=10000000`;
-  appids.forEach((id, i) => {
-    achievementsUrl += `&appids[${i}]=${id}`;
-  });
-
-  const achievementsData = await fetchJSON(achievementsUrl);
-
-  let totalAchievements = 0;
-  if (achievementsData.response && achievementsData.response.games) {
-    for (const game of achievementsData.response.games) {
-      totalAchievements += 'achievements' in game ? game.total_achievements : 0;
-    }
-  }
-
-  // Check if playing a game
-  let isPlaying = !!player.gameextrainfo;
-  let status = getOnlineStatus(player.personastate);
-  let gameHeaderUrl = '';
-  if (isPlaying) {
-    const gameDetailsUrl = `https://store.steampowered.com/api/appdetails?appids=${player.gameid}`;
-    const gameData = await fetchJSON(gameDetailsUrl);
-    if (gameData[player.gameid] && gameData[player.gameid].success) {
-      gameHeaderUrl = gameData[player.gameid].data.header_image;
-    }
-    status = `In Game`;
-  }
-
-  // Get avatar and frame URLs
-  let avatarUrl = player.avatarfull; // Fallback to static from summary
-  let frameUrl = '';
-  if (frameData.response && frameData.response.avatar_frame) {
-    frameUrl = BASE_IMAGE_URL + frameData.response.avatar_frame.image_large;
-  }
-
-  // Composite avatar with frame
-  let avatarImage = await getFramedAvatar(avatarUrl, frameUrl);
-
-  // Create widget
-  let widget = new ListWidget();
-  widget.setPadding(0, 0, 0, 0);
-
-  // Set background
-  let bgImage = null;
-  if (bgData.response && bgData.response.profile_background && bgData.response.profile_background.image_large) {
-    let bgUrl = BASE_IMAGE_URL + bgData.response.profile_background.image_large;
-    bgImage = await loadImage(bgUrl);
-  }
-  if (bgImage) {
-    widget.backgroundImage = bgImage;
+  // Background
+  if (status === "active") {
+    widget.backgroundGradient = COLOR_BG_ACTIVE;
+  } else if (status === "peak") {
+    widget.backgroundGradient = COLOR_BG_PEAK;
   } else {
-    // Fallback gradient
-    let gradient = new LinearGradient();
-    gradient.locations = [0, 1];
-    gradient.colors = [new Color('#0F2027'), new Color('#2C5364')];
-    widget.backgroundGradient = gradient;
+    widget.backgroundGradient = COLOR_BG_EXPIRED;
   }
 
-  // Darken entire widget if playing
-  if (isPlaying) {
-    widget.backgroundColor = new Color('#000000', 0.5);
+  // Open Claude when tapped
+  widget.url = "https://claude.ai";
+
+  if (status === "expired") {
+    // ── EXPIRED STATE ──
+    const emoji = widget.addText("💤");
+    emoji.font = Font.systemFont(28);
+    emoji.centerAlignText();
+
+    widget.addSpacer(6);
+
+    const title = widget.addText("Promo Ended");
+    title.font = Font.boldSystemFont(15);
+    title.textColor = COLOR_DIM;
+    title.centerAlignText();
+
+    widget.addSpacer(4);
+
+    const sub = widget.addText("Back to normal limits");
+    sub.font = Font.systemFont(11);
+    sub.textColor = COLOR_GRAY;
+    sub.centerAlignText();
+
+  } else if (status === "active") {
+    // ── ACTIVE / 2X STATE ──
+
+    // Top badge row
+    const badgeStack = widget.addStack();
+    badgeStack.layoutHorizontally();
+    badgeStack.centerAlignContent();
+
+    const badgeText = badgeStack.addText("2×");
+    badgeText.font = Font.boldSystemFont(36);
+    badgeText.textColor = COLOR_GREEN;
+    badgeStack.addSpacer(8);
+
+    const labelStack = badgeStack.addStack();
+    labelStack.layoutVertically();
+    const labelTop = labelStack.addText("USAGE");
+    labelTop.font = Font.boldSystemFont(11);
+    labelTop.textColor = COLOR_GREEN;
+    const labelBot = labelStack.addText("ACTIVE");
+    labelBot.font = Font.boldSystemFont(11);
+    labelBot.textColor = COLOR_GREEN;
+
+    widget.addSpacer(8);
+
+    // Fun message
+    const msgs = [
+      "Time to cook. 🍳",
+      "Ship something. 🚀",
+      "Go build. ⚡",
+      "Double tokens, no cap. 🔥",
+      "Max out. Now. 💪",
+      "The window is open. 🪟",
+    ];
+    const msg = msgs[new Date().getMinutes() % msgs.length];
+    const funText = widget.addText(msg);
+    funText.font = Font.mediumSystemFont(13);
+    funText.textColor = COLOR_WHITE;
+    funText.minimumScaleFactor = 0.7;
+
+    widget.addSpacer(6);
+
+    // Expiry countdown
+    const days = daysUntilExpiry(now);
+    const expiryRow = widget.addStack();
+    expiryRow.layoutHorizontally();
+    expiryRow.centerAlignContent();
+
+    const dot = expiryRow.addText("●");
+    dot.font = Font.systemFont(8);
+    dot.textColor = COLOR_YELLOW;
+    expiryRow.addSpacer(4);
+
+    const expires = expiryRow.addText(
+      days === 1 ? "Ends tomorrow" : `Ends in ${days} days`
+    );
+    expires.font = Font.systemFont(10);
+    expires.textColor = COLOR_YELLOW;
+
   } else {
-    widget.backgroundColor = new Color('#1A1A1A', 0.5); // Semi-transparent
-  }
+    // ── PEAK (normal limits) STATE ──
 
-  // Content stack horizontal
-  let contentStack = widget.addStack();
-  contentStack.layoutHorizontally();
+    const emojiText = widget.addText("⏳");
+    emojiText.font = Font.systemFont(28);
+    emojiText.centerAlignText();
 
-  // New left container with darkening and no external padding
-  let leftContainer = contentStack.addStack();
-  leftContainer.layoutVertically();
-  leftContainer.cornerRadius = 20;
-  leftContainer.backgroundColor = new Color('#000000', 0.5);
-  leftContainer.setPadding(10, 10, 10, 10); // Internal padding for content
+    widget.addSpacer(4);
 
-  // Info stack inside left container
-  let infoStack = leftContainer;
+    const peakLabel = widget.addText("Peak Hours");
+    peakLabel.font = Font.boldSystemFont(14);
+    peakLabel.textColor = COLOR_DIM;
+    peakLabel.centerAlignText();
 
-  // Add avatar stack
-  let avatarStack = infoStack.addStack();
-  avatarStack.layoutHorizontally();
+    widget.addSpacer(4);
 
-  let avatar = avatarStack.addImage(avatarImage);
-  avatar.imageSize = new Size(60, 60);
+    const normalLabel = widget.addText("Normal limits now");
+    normalLabel.font = Font.systemFont(11);
+    normalLabel.textColor = COLOR_GRAY;
+    normalLabel.centerAlignText();
 
-  avatarStack.addSpacer(10);
+    widget.addSpacer(6);
 
-  // Name and level stack
-  let nameLevelStack = avatarStack.addStack();
-  nameLevelStack.layoutVertically();
+    // Show when 2x resumes
+    const msUntil = timeUntilNextWindow(now);
+    const countdownStr = formatCountdown(msUntil);
+    const resumeRow = widget.addStack();
+    resumeRow.layoutHorizontally();
+    resumeRow.centerAlignContent();
 
-  // Name
-  let nameText = nameLevelStack.addText(player.personaname);
-  nameText.font = Font.boldSystemFont(18);
-  nameText.textColor = Color.white();
-
-  // Level
-  let levelText = nameLevelStack.addText(`Level: ${level}`);
-  levelText.font = Font.mediumSystemFont(14);
-  levelText.textColor = getLevelColor(level);
-
-  infoStack.addSpacer(10);
-
-  // Status
-  let statusText = infoStack.addText(`Status: ${status}`);
-  statusText.font = Font.semiboldSystemFont(16);
-  statusText.textColor = getStatusColor(player.personastate);
-
-  infoStack.addSpacer(5);
-
-  // Games
-  let gamesText = infoStack.addText(`Games: ${gamesCount}`);
-  gamesText.font = Font.mediumSystemFont(14);
-  gamesText.textColor = Color.white();
-
-  infoStack.addSpacer(5);
-
-  // Achievements
-  let achText = infoStack.addText(`Achievements: ${totalAchievements}`);
-  achText.font = Font.mediumSystemFont(14);
-  achText.textColor = Color.white();
-
-  infoStack.addSpacer();
-
-  if (player.personastate < 1) {
-    // Last online
-    let lastLogoff = new Date(player.lastlogoff * 1000).toLocaleString();
-    let lastText = infoStack.addText(`Last online: ${lastLogoff}`);
-    lastText.font = Font.lightSystemFont(12);
-    lastText.textColor = new Color('#d2d2d2ff');
-  }
-
-  // Push to left when not playing
-  if (!isPlaying) {
-    contentStack.addSpacer();
-  }
-
-  // If playing, add game image on right
-  if (isPlaying && gameHeaderUrl) {
-    contentStack.addSpacer(8);
-
-    let gameImgStack = contentStack.addStack();
-    gameImgStack.setPadding(0, 0, 0, 0);
-    gameImgStack.layoutVertically();
-    gameImgStack.centerAlignContent(); // Center horizontally
-
-    // Top spacer
-    gameImgStack.addSpacer();
-
-    let gameImage = await loadImage(gameHeaderUrl);
-    if (gameImage) {
-      let gameImg = gameImgStack.addImage(gameImage);
-      gameImg.si;
-      gameImg.cornerRadius = 5;
-    }
-
-    // Game name
-    let isPlaying = !!player.gameextrainfo;
-    if (isPlaying) {
-      const gameDetailsUrl = `https://store.steampowered.com/api/appdetails?appids=${player.gameid}`;
-      const gameData = await fetchJSON(gameDetailsUrl);
-      if (gameData[player.gameid] && gameData[player.gameid].success) {
-        let gameInfoStack = gameImgStack.addStack();
-        gameInfoStack.setPadding(0, 0, 0, 0);
-        gameInfoStack.backgroundColor = new Color('#000000', 0.5);
-        gameInfoStack.cornerRadius = 5;
-        gameInfoStack.layoutHorizontally();
-
-        // Left spacer
-        gameInfoStack.addSpacer();
-
-        let gameNameText = gameInfoStack.addText(player.gameextrainfo);
-        gameNameText.font = Font.mediumSystemFont(16);
-        gameNameText.textColor = new Color('#3aea43ff');
-
-        // Right spacer
-        gameInfoStack.addSpacer();
-      }
-    }
-
-    // Bottom spacer
-    gameImgStack.addSpacer();
-
-    contentStack.addSpacer(8);
+    const resumeLabel = resumeRow.addText(`2× resumes in ${countdownStr}`);
+    resumeLabel.font = Font.mediumSystemFont(11);
+    resumeLabel.textColor = COLOR_ACCENT;
+    resumeLabel.centerAlignText();
   }
 
   return widget;
 }
 
-// Helper function to load image with error handling
-async function loadImage(url) {
-  try {
-    let req = new Request(url);
-    return await req.loadImage();
-  } catch (e) {
-    console.log(`Error loading image from ${url}: ${e}`);
-    return null;
-  }
-}
+// ─── RUN ──────────────────────────────────────────────
+const widget = await createWidget();
 
-// Function to composite avatar and frame
-async function getFramedAvatar(avatarUrl, frameUrl) {
-  let avatarImg = await loadImage(avatarUrl);
-  if (!avatarImg) {
-    let ctx = new DrawContext();
-    ctx.size = new Size(184, 184);
-    ctx.opaque = false;
-    ctx.setFillColor(new Color('#1538fc28'));
-    return ctx.getImage(); // Empty image
-  }
-
-  let ctx = new DrawContext();
-  ctx.size = new Size(184, 184);
-  ctx.opaque = false;
-
-  ctx.drawImageInRect(avatarImg, new Rect(0, 0, 184, 184));
-
-  if (frameUrl) {
-    let frameImg = await loadImage(frameUrl);
-    if (frameImg) {
-      ctx.drawImageInRect(frameImg, new Rect(-13, -13, 210, 210));
-    }
-  }
-
-  return ctx.getImage();
-}
-
-// Helper for online status
-function getOnlineStatus(state) {
-  const states = ['Offline', 'Online', 'Busy', 'Away', 'Snooze', 'Looking to Trade', 'Looking to Play'];
-  return states[state] || 'Unknown';
-}
-
-function getStatusColor(state) {
-  if (state === 1) return new Color('#3aea43ff'); // Online green
-  if (state > 1) return new Color('#FFA000'); // Busy/Away orange
-  return new Color('#d2d2d2ff'); // Offline
-}
-
-// Helper for level color (based on Steam level colors)
-function getLevelColor(level) {
-  const tier = Math.floor(level / 10);
-  switch (tier) {
-    case 0:
-      return new Color('#B0C3D9'); // 0-9 gray
-    case 1:
-      return new Color('#EB4B4B'); // 10-19 red
-    case 2:
-      return new Color('#D4A53A'); // 20-29 orange
-    case 3:
-      return new Color('#EEDD82'); // 30-39 yellow
-    case 4:
-      return new Color('#23ee2dff'); // 40-49 green
-    case 5:
-      return new Color('#67C1F5'); // 50-59 blue
-    case 6:
-      return new Color('#855DC1'); // 60-69 purple
-    default:
-      return new Color('#EB4B4B'); // Higher levels
-  }
-}
-
-// Scriptable setup
-if (!config.runsInWidget) {
-  let widget = await createWidget();
-  await widget.presentMedium();
-} else {
-  let widget = await createWidget();
+if (config.runsInWidget) {
   Script.setWidget(widget);
+} else {
+  // Preview in app — try small first, it fits best
+  await widget.presentSmall();
 }
-Script.complete();
+
+Script.complete()
