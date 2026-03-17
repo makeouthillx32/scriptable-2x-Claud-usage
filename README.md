@@ -1,107 +1,243 @@
-# Steam Profile Widget for Scriptable
+// Claude 2x Usage Widget
+// by skill · for iOS Scriptable
+// Promo: March 13–27, 2026
+// 2x on weekdays OUTSIDE 8AM–2PM ET (5–11AM PT)
+// 2x ALL DAY on weekends
 
-A sleek and informative iOS widget, built for the [Scriptable](https://scriptable.app/) app, that displays your Steam profile's vital statistics right on your Home Screen.
+// ─── CONFIG ───────────────────────────────────────────
+const PROMO_END = new Date("2026-03-28T00:00:00-05:00"); // March 27 end of day ET
 
-Never miss a beat with your gaming friends or keep a quick eye on your own Steam account with this elegant and data-rich widget.
+// Peak window in ET hours (24h)
+const PEAK_START_ET = 8;  // 8 AM ET
+const PEAK_END_ET   = 14; // 2 PM ET
 
-![Widget Preview](https://raw.githubusercontent.com/SolsticeLeaf/Scriptable-Steam-Widget/refs/heads/master/.github/images/in_game.jpg?raw=true)
+// Colors
+const COLOR_BG_ACTIVE   = new LinearGradient();
+COLOR_BG_ACTIVE.locations = [0, 1];
+COLOR_BG_ACTIVE.colors = [new Color("#0f0c29"), new Color("#302b63")];
 
-## 🖼️ Images
+const COLOR_BG_PEAK = new LinearGradient();
+COLOR_BG_PEAK.locations = [0, 1];
+COLOR_BG_PEAK.colors = [new Color("#1a1a2e"), new Color("#16213e")];
 
-<details>
-<summary><b>User offline</b></summary>
+const COLOR_BG_EXPIRED = new LinearGradient();
+COLOR_BG_EXPIRED.locations = [0, 1];
+COLOR_BG_EXPIRED.colors = [new Color("#1a1a1a"), new Color("#2d2d2d")];
 
-![Offline](https://raw.githubusercontent.com/SolsticeLeaf/Scriptable-Steam-Widget/refs/heads/master/.github/images/offline.jpg?raw=true)
+const COLOR_ACCENT  = new Color("#cc785c"); // Claude orange-ish
+const COLOR_WHITE   = new Color("#ffffff");
+const COLOR_DIM     = new Color("#aaaaaa");
+const COLOR_GREEN   = new Color("#4ade80");
+const COLOR_YELLOW  = new Color("#facc15");
+const COLOR_GRAY    = new Color("#666666");
+// ──────────────────────────────────────────────────────
 
-</details>
+function getETHour(date) {
+  // ET = UTC-5 (EST) or UTC-4 (EDT)
+  // Use Intl to correctly resolve ET including DST
+  const etString = date.toLocaleString("en-US", { timeZone: "America/New_York", hour: "numeric", hour12: false });
+  return parseInt(etString, 10);
+}
 
-<details>
-<summary><b>User online</b></summary>
+function isWeekend(date) {
+  // Day of week in ET
+  const day = parseInt(
+    date.toLocaleString("en-US", { timeZone: "America/New_York", weekday: "short" })
+      .replace("Sun", "0").replace("Mon", "1").replace("Tue", "2")
+      .replace("Wed", "3").replace("Thu", "4").replace("Fri", "5").replace("Sat", "6"),
+    10
+  );
+  // Simpler: use numeric
+  const etDay = new Date(date.toLocaleString("en-US", { timeZone: "America/New_York" })).getDay();
+  return etDay === 0 || etDay === 6;
+}
 
-![Online](https://raw.githubusercontent.com/SolsticeLeaf/Scriptable-Steam-Widget/refs/heads/master/.github/images/online.jpg?raw=true)
+function getStatus(now) {
+  if (now >= PROMO_END) return "expired";
+  if (isWeekend(now)) return "active";
+  const etHour = getETHour(now);
+  if (etHour >= PEAK_START_ET && etHour < PEAK_END_ET) return "peak";
+  return "active";
+}
 
-</details>
+function timeUntilNextWindow(now) {
+  // Returns ms until next 2x window starts
+  // If we're in peak, next window is at 2PM ET today
+  const etHour = getETHour(now);
+  if (!isWeekend(now) && etHour >= PEAK_START_ET && etHour < PEAK_END_ET) {
+    // Next 2x starts at PEAK_END_ET
+    const next = new Date(now.toLocaleString("en-US", { timeZone: "America/New_York" }));
+    next.setHours(PEAK_END_ET, 0, 0, 0);
+    // Convert back — approximate offset
+    const diff = next - new Date(now.toLocaleString("en-US", { timeZone: "America/New_York" }));
+    return diff;
+  }
+  return 0;
+}
 
-<details>
-<summary><b>User afk</b></summary>
+function formatCountdown(ms) {
+  if (ms <= 0) return "now";
+  const totalSecs = Math.floor(ms / 1000);
+  const h = Math.floor(totalSecs / 3600);
+  const m = Math.floor((totalSecs % 3600) / 60);
+  if (h > 0) return `${h}h ${m}m`;
+  return `${m}m`;
+}
 
-![Away](https://raw.githubusercontent.com/SolsticeLeaf/Scriptable-Steam-Widget/refs/heads/master/.github/images/away.jpg?raw=true)
+function daysUntilExpiry(now) {
+  const diff = PROMO_END - now;
+  return Math.ceil(diff / (1000 * 60 * 60 * 24));
+}
 
-</details>
+// ─── BUILD WIDGET ──────────────────────────────────────
+async function createWidget() {
+  const now = new Date();
+  const status = getStatus(now);
 
-<details>
-<summary><b>User playing game</b></summary>
+  const widget = new ListWidget();
+  widget.setPadding(14, 16, 14, 16);
 
-![In Game](https://raw.githubusercontent.com/SolsticeLeaf/Scriptable-Steam-Widget/refs/heads/master/.github/images/in_game.jpg?raw=true)
+  // Refresh every 5 minutes
+  const nextRefresh = new Date(now.getTime() + 5 * 60 * 1000);
+  widget.refreshAfterDate = nextRefresh;
 
-</details>
+  // Background
+  if (status === "active") {
+    widget.backgroundGradient = COLOR_BG_ACTIVE;
+  } else if (status === "peak") {
+    widget.backgroundGradient = COLOR_BG_PEAK;
+  } else {
+    widget.backgroundGradient = COLOR_BG_EXPIRED;
+  }
 
-## ✨ Features
+  // Open Claude when tapped
+  widget.url = "https://claude.ai";
 
-This widget fetches and beautifully presents the following information from a public Steam profile:
+  if (status === "expired") {
+    // ── EXPIRED STATE ──
+    const emoji = widget.addText("💤");
+    emoji.font = Font.systemFont(28);
+    emoji.centerAlignText();
 
-- **Profile Identity:** User's avatar and profile frame.
-- **Visual Flair:** The background image from their mini-profile.
-- **Current Status:** Online, Offline, Away, or In-Game.
-- **Last Logoff:** The last time the user was online.
-- **Gaming Stats:** Total number of games owned and achievements unlocked.
-- **Current Activity:** If the user is "In-Game," the widget will display which game they are currently playing.
+    widget.addSpacer(6);
 
-## 🚀 Installation
+    const title = widget.addText("Promo Ended");
+    title.font = Font.boldSystemFont(15);
+    title.textColor = COLOR_DIM;
+    title.centerAlignText();
 
-### Prerequisites
+    widget.addSpacer(4);
 
-1.  **Scriptable App:** You must have the [Scriptable App](https://apps.apple.com/us/app/scriptable/id1405459188) installed on your iOS device.
-2.  **Steam Web API Key:** The widget requires a free API key from Steam.
-    - Get your key here: [https://steamcommunity.com/dev/apikey](https://steamcommunity.com/dev/apikey)
-    - Your Steam profile must be public (or the specific details you wish to show must be public) for the data to be accessible.
+    const sub = widget.addText("Back to normal limits");
+    sub.font = Font.systemFont(11);
+    sub.textColor = COLOR_GRAY;
+    sub.centerAlignText();
 
-### Setup Steps
+  } else if (status === "active") {
+    // ── ACTIVE / 2X STATE ──
 
-1.  **Get the Code:** Copy the raw source code from the [widget.js](https://raw.githubusercontent.com/SolsticeLeaf/Scriptable-Steam-Widget/refs/heads/master/widget.js) file in this repository.
-2.  **Open Scriptable:** Tap the `+` icon in the top-right corner of the Scriptable app to create a new script.
-3.  **Paste the Code:** Replace the default code with the code you copied.
-4.  **Configure the Script:**
-    - Open script code.
-    - You need to provide two pieces of information in the following lines:
-      ```javascript
-      const API_KEY = 'YOUR_API_KEY'; // Replace with your Steam API Key
-      const STEAM_ID = 'YOUR_STEAM_ID_64'; // Replace with your 64-bit Steam ID
-      ```
-      - **`STEAM_API_KEY`**: The API key you obtained from the prerequisites [https://steamcommunity.com/dev/apikey](https://steamcommunity.com/dev/apikey).
-      - **`STEAM_ID_64`**: Your 17-digit SteamID64. You can find this easily on sites like [steamid.io](https://steamid.io/).
-    - _Example:_
-      ```javascript
-      const API_KEY = '0DB815081051B5AD7180D02F78B8G712'; // Of course this is not valid key, don't try :)
-      const STEAM_ID = '76561198207625457';
-      ```
-5.  **Save the Script:** Give your script a name (e.g., "Steam Widget") and save it.
-6.  **Add to Home Screen:**
-    - Run the script once inside the app to ensure it works.
-    - On your Home Screen, enter "jiggle mode".
-    - Tap the `+` button in the top-left corner.
-    - Search for and select **"Scriptable"**.
-    - Choose medium widget size.
-    - Tap the widget on your Home Screen to edit it, and select the "Steam Widget" script.
+    // Top badge row
+    const badgeStack = widget.addStack();
+    badgeStack.layoutHorizontally();
+    badgeStack.centerAlignContent();
 
-## 🛠️ Configuration
+    const badgeText = badgeStack.addText("2×");
+    badgeText.font = Font.boldSystemFont(36);
+    badgeText.textColor = COLOR_GREEN;
+    badgeStack.addSpacer(8);
 
-The main configuration happens in the Scriptable parameter as described above. The widget is designed to work out-of-the-box. But you can edit the HEX color codes in the script to match your preferred theme.
+    const labelStack = badgeStack.addStack();
+    labelStack.layoutVertically();
+    const labelTop = labelStack.addText("USAGE");
+    labelTop.font = Font.boldSystemFont(11);
+    labelTop.textColor = COLOR_GREEN;
+    const labelBot = labelStack.addText("ACTIVE");
+    labelBot.font = Font.boldSystemFont(11);
+    labelBot.textColor = COLOR_GREEN;
 
-## 📝 API Disclaimer
+    widget.addSpacer(8);
 
-This widget is a third-party tool and is not affiliated with or endorsed by Valve Corporation. It uses the publicly available [Steam Web API](https://steamcommunity.com/dev). Data availability and accuracy depend on the user's privacy settings and the stability of the Steam API.
+    // Fun message
+    const msgs = [
+      "Time to cook. 🍳",
+      "Ship something. 🚀",
+      "Go build. ⚡",
+      "Double tokens, no cap. 🔥",
+      "Max out. Now. 💪",
+      "The window is open. 🪟",
+    ];
+    const msg = msgs[new Date().getMinutes() % msgs.length];
+    const funText = widget.addText(msg);
+    funText.font = Font.mediumSystemFont(13);
+    funText.textColor = COLOR_WHITE;
+    funText.minimumScaleFactor = 0.7;
 
-## 🤝 Contributing
+    widget.addSpacer(6);
 
-Contributions, issues, and feature requests are welcome! Feel free to check the [issues page](https://github.com/SolsticeLeaf/Scriptable-Steam-Widget/issues) or open a pull request.
+    // Expiry countdown
+    const days = daysUntilExpiry(now);
+    const expiryRow = widget.addStack();
+    expiryRow.layoutHorizontally();
+    expiryRow.centerAlignContent();
 
-## 📜 License
+    const dot = expiryRow.addText("●");
+    dot.font = Font.systemFont(8);
+    dot.textColor = COLOR_YELLOW;
+    expiryRow.addSpacer(4);
 
-This project is licensed under the **GNU License**. See the [LICENSE](https://raw.githubusercontent.com/SolsticeLeaf/Scriptable-Steam-Widget/refs/heads/master/LICENSE) file for details.
+    const expires = expiryRow.addText(
+      days === 1 ? "Ends tomorrow" : `Ends in ${days} days`
+    );
+    expires.font = Font.systemFont(10);
+    expires.textColor = COLOR_YELLOW;
 
----
+  } else {
+    // ── PEAK (normal limits) STATE ──
 
-**Enjoy your new Steam widget!**
+    const emojiText = widget.addText("⏳");
+    emojiText.font = Font.systemFont(28);
+    emojiText.centerAlignText();
 
-If you find this project helpful, please consider giving it a ⭐ on GitHub!
+    widget.addSpacer(4);
+
+    const peakLabel = widget.addText("Peak Hours");
+    peakLabel.font = Font.boldSystemFont(14);
+    peakLabel.textColor = COLOR_DIM;
+    peakLabel.centerAlignText();
+
+    widget.addSpacer(4);
+
+    const normalLabel = widget.addText("Normal limits now");
+    normalLabel.font = Font.systemFont(11);
+    normalLabel.textColor = COLOR_GRAY;
+    normalLabel.centerAlignText();
+
+    widget.addSpacer(6);
+
+    // Show when 2x resumes
+    const msUntil = timeUntilNextWindow(now);
+    const countdownStr = formatCountdown(msUntil);
+    const resumeRow = widget.addStack();
+    resumeRow.layoutHorizontally();
+    resumeRow.centerAlignContent();
+
+    const resumeLabel = resumeRow.addText(`2× resumes in ${countdownStr}`);
+    resumeLabel.font = Font.mediumSystemFont(11);
+    resumeLabel.textColor = COLOR_ACCENT;
+    resumeLabel.centerAlignText();
+  }
+
+  return widget;
+}
+
+// ─── RUN ──────────────────────────────────────────────
+const widget = await createWidget();
+
+if (config.runsInWidget) {
+  Script.setWidget(widget);
+} else {
+  // Preview in app — try small first, it fits best
+  await widget.presentSmall();
+}
+
+Script.complete()
